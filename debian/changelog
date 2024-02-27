@@ -1,0 +1,87 @@
+lua-unit (3.4-2) unstable; urgency=medium
+
+  [ Debian Janitor ]
+  * Use secure copyright file specification URI.
+  * Bump debhelper from old 10 to 12.
+  * Set debhelper-compat version in Build-Depends.
+  * Set upstream metadata fields: Bug-Database, Bug-Submit.
+  * Bump debhelper from old 12 to 13.
+  * Set upstream metadata fields: Repository-Browse.
+
+ -- Jelmer Vernooĳ <jelmer@debian.org>  Fri, 09 Dec 2022 10:11:17 +0000
+
+lua-unit (3.4-1) unstable; urgency=medium
+
+  [ Victor Seva ]
+  * New upstream version 3.4
+  * add support for Lua 5.4
+  * remove patches, already applied upstream
+  * set maintainer to lua-team (Closes: #995551)
+
+  [ Debian Janitor ]
+  * Set upstream metadata fields: Bug-Database, Bug-Submit.
+  * Bump debhelper from old 12 to 13.
+
+ -- Victor Seva <vseva@debian.org>  Wed, 22 Dec 2021 22:44:55 +0100
+
+lua-unit (3.3-1) unstable; urgency=medium
+
+  * update d/gdb.conf
+  * New upstream version 3.3
+  * debhelper compat 10
+  * add support for lua5.3
+  * update Vcs-* due migration to salsa
+  * update Standards-Version to 4.1.4 (no changes needed)
+  * fix build-depends-on-python-sphinx-only
+  * rules: clean doc/_build
+  * tests: use --shuffle
+  * add patches to fix build
+
+ -- Victor Seva <vseva@debian.org>  Thu, 21 Jun 2018 13:51:58 +0200
+
+lua-unit (3.2-1) unstable; urgency=medium
+
+  * [4b747d1] filter upstream doc/html
+  * [b97125b] remove upstream doc/html
+  * [c6707ef] New upstream version 3.2
+  * [e605b86] update Standards-Version to 3.9.8
+  * [5ffd966] use my DD account. wrap-and-sort -sat
+  * [2d4da45] fix invalid-short-name-in-dep5-copyright
+  * [ac5bd1e] fix spelling-error-in-description
+  * [a2fa290] fix extra-license-file
+  * [6a64e3d] provide docs in text format
+  * [eccb17f] fix package-uses-deprecated-debhelper-compat-version 8
+
+ -- Victor Seva <vseva@debian.org>  Mon, 21 Nov 2016 15:10:33 +0100
+
+lua-unit (3.1-1) unstable; urgency=medium
+
+  * [a2792de] update Homepage and set Standards-Version to 3.9.6
+  * [bb2f072] update watch file orig
+  * [42168b5] add debian/gbp.conf
+  * [b0c3c74] Imported Upstream version 3.1
+  * [83afae1] remove TODO.Debian
+  * [e3fecf8] update test file
+  * [b115334] fix Vcs links
+
+ -- Victor Seva <linuxmaniac@torreviejawireless.org>  Mon, 25 May 2015 00:35:39 +0200
+
+lua-unit (3.0-1) unstable; urgency=medium
+
+  * New upstream version
+
+ -- Victor Seva <linuxmaniac@torreviejawireless.org>  Thu, 09 Oct 2014 10:27:35 +0200
+
+lua-unit (1.5+gita58da93-2) unstable; urgency=low
+
+  * Just build lua-unit and put in it the two available examples
+  * Fix typo in copyright
+
+ -- Enrico Tassi <gareuselesinge@debian.org>  Tue, 02 Jul 2013 11:26:16 +0200
+
+lua-unit (1.5+gita58da93-1) unstable; urgency=low
+
+  * Initial release. (Closes: #703166)
+  * Used depends dh >= 16~. Let's be nice with backports
+
+ -- Victor Seva <linuxmaniac@torreviejawireless.org>  Wed, 22 May 2013 18:13:57 +0200
