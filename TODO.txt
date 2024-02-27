@@ -1,9 +1,19 @@
+# make all instead of make platform, this would allow to remove platform.sh
+# also avoid setnv_lua.sh if possible
+
+# ensure luarocks package are installed inside insall location
+/home/travis/build/bluebird75/luaunit/install/luarocks/share/lua/5.1/luarocks"
+/home/travis/build/bluebird75/luaunit/install/luarocks/share/lua/5.1/luarocks"
+
+
 TODO Future:
 ============
+- run a full modules with a function
+- build lua with ASAN, memory sanitizer and so on on travis before running it
+- ensure that assert string functions like assertStr, strcontains, etc reject incorrect type with a correct error message
 - pretty function formatting: https://github.com/luarocks/luarocks/blob/master/src/luarocks/core/util.lua
 - platform detection:
 - document prettystr
-- add the ability to count the number of assertions that should have been executed in the test
 - validate output with ignored tests (0 failures or some failures)
 - parametrize tests
 - coloured output
@@ -27,23 +37,62 @@ TODO Future:
 - assertListContainsElements
 - checkXXX for every assertXXX
 
-Version 3.4:
+- review and enhance: TestLuaUnitExecution:test_withTableErrorInside
+
+
+Version 3.5 (future):
 ============
+
+Planned:
+--------
 - global setup / teardown
 - class setup / teardown
 - report test duration everywhere
-- allow to skip tests
 - add date and duration to tap output
 - XML: report system information
 - align the "OK" vertically for text output
 - better detection of screen size
-- catch the os.exit call with a handler or something, to avoid aborting the tests
 - move all file:line description to stack trace
 - better deal with one line formatting
+- table_contains():
+	+ check with finding table or nested tables
+	+ add check for error messages
+- correctly compare tables with same content but different metatable
+
+Already done:
+-------------
+- 
+
+Version 3.4:
+============
+TODO:
+- assertAlmostNotEquals shall support tables
+- document the release process to luarocks and update dev manual
+- add test for the runner interface of luaunit
+- update examples
+- dev guide: explain doit.py
+- dev guide: explain CI
+
+Done
+- add a list of environment variables controlling LuaUnit
+- double-check documentation generation
+- move enabling global namespace pollution explanation to a later chapter
+- update doc about TABLE_EQUALS_KEYBYCONTENT
+- update doc about test skipping
+- update documentation about how to run list of test classes
+- update documentation about setOutputType()
+- assertAlmostEquals can check lists and more complex structures
+- can choose test output type through environment variables LUAUNIT_OUTPUT
+- setOutputType() also accepts the xml filename when using the format junit
+- simplify printing of table-info in cycles
+- allow to skip tests
+- fix a bug where assertIs/assertNotIs would not deal with protected metatables
+- fix a bug in dealing with table including cycles of different structure
+- remove option TABLE_EQUALS_KEYBYCONTENT, it did not make sense
 
 
-Done since 3.2:
-===============
+Version 3.3:
+============
 - make sure that example source code is included in documentation when packaging
 - add annex to documentation with full source code of example
 - add annex with BSD license
@@ -114,6 +163,7 @@ x Junit XML Ouptut:
 
 Done:
 ============
+x add email to report vulnerabilities in private
 x add other types of output
 x assert with matching of the error message
 x finish user documentation

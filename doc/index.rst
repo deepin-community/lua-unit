@@ -41,7 +41,7 @@ More details
 LuaUnit provides a wide range of assertions and goes into great efforts to provide the most useful output. For example
 since version 3.3 , comparing lists will provide a detailed difference analysis:
 
-.. code-block:: lua
+.. code-block:: 
 
     -- lua test code. Can you spot the difference ?
     function TestListCompare:test1()
@@ -100,7 +100,7 @@ Several installation methods are available.
 LuaRocks
 --------
 
-LuaUnit v3.3 is available as a `LuaRocks package`_ .
+LuaUnit is available as a `LuaRocks package`_ .
 
 .. _LuaRocks package: https://luarocks.org/modules/bluebird75/luaunit
 
@@ -130,7 +130,7 @@ the Lua version and installation directory. It uses, by default, Linux paths tha
 Upgrade note
 ================
 
-**Important note when upgrading to version 3.1 and above** : there is a break of backward compatibility in version 3.1, assertions functions are no longer exported directly to the global namespace. See :ref:`luaunit-global-asserts` on how to adjust or restore previous behavior.
+**Important note when upgrading from version below 3.1** : there is a break of backward compatibility in version 3.1, assertions functions are no longer exported directly to the global namespace. See :ref:`luaunit-global-asserts` on how to adjust or restore previous behavior.
 
 
 LuaUnit development
@@ -141,6 +141,25 @@ See `Developing luaunit`_
 Version and Changelog
 =====================
 This documentation describes the functionality of LuaUnit v3.2 .
+
+New in version 3.4 - 02 March 2021
+----------------------------------
+* support for Lua 5.4
+* :func:`assertAlmostEquals` works also on tables and nested structures
+* choose test output style with environment variable `LUAUNIT_OUTPUT`
+* :func:`runner:setOutputType()` accepts the xml filename as second argument when using the format *junit*
+* improve printing of table information in case of cycles
+* add ability to skip tests with :func:`skip` and :func:`skipIf`  
+* detect attempts to exit the test suite before it is finished running
+* add :func:`assertErrorMsgContentEquals` to validate exactly any error message
+* filter out some stack entries when printing assertions (useful when embedding LuaUnit inside another test layer) with :ref:`strip_extra_entries_in_stack_trace`
+* add :func:`assertTableContains` and :func:`assertNotTableContains` to verify the presence of a given value within a table
+* remove option `TABLE_EQUALS_KEYBYCONTENT`, it did not make sense
+* bugfix:
+    * :func:`assertIs`/:func:`assertNotIs` deals better with protected metatables
+    * :func:`assertEquals` deals better with tables containing cycles of different structure
+    * fix table length comparison for table returning inconsistent length
+
 
 New in version 3.3 - 6. Mar 2018
 --------------------------------
@@ -256,7 +275,7 @@ Getting started with LuaUnit
 ****************************
 
 This section will guide you through a step by step usage of *LuaUnit* . The full source code
-of the example below is available in the : :ref:`source-code-example` or in the file *my_test_suite.lua* 
+of the example below is available in the : `source_code_example`_ or in the file *my_test_suite.lua* 
 in the doc directory.
 
 Setting up your test script
@@ -550,6 +569,11 @@ Example of TAP format::
     ok     7        TestDiv.testDivZero
     # Ran 7 tests in 0.007 seconds, 7 successes, 0 failures
 
+
+Output formats may also be controlled by the following environment variables:
+* LUAUNIT_OUTPUT: output format to use
+* LUAUNIT_JUNIT_FNAME: for junit output format, name of the xml file
+
 For a more detailed overview of all formats and their verbosity see the section `Output formats`_ .
 
 
@@ -580,7 +604,6 @@ With ``--pattern`` or ``-p``, you can provide a lua pattern and only the tests t
 the pattern will actually be run.
 
 Example::
-
     -- Run all tests of zero testing and error testing
     -- by using the magic character .
     $ lua my_test_suite.lua -v -p Err.r -p Z.ro
@@ -631,139 +654,6 @@ assertions, command-line options and specific behavior.
 Reference documentation
 ***********************
 
-.. _luaunit-global-asserts:
-
-Enabling global or module-level functions
-=========================================
-
-Versions of LuaUnit before version 3.1 would export all assertions functions to the global namespace. A typical
-lua test file would look like this:
-
-.. code-block:: lua
-
-    require('luaunit')
-
-    TestToto = {} --class
-
-        function TestToto:test1_withFailure()
-            local a = 1
-            assertEquals( a , 1 )
-            -- will fail
-            assertEquals( a , 2 )
-        end
-
-    [...]
-
-However, this is an obsolete practice in Lua. It is now recommended to keep all functions inside the module. Starting
-from version 3.1 LuaUnit follows this practice and the code should be adapted to look like this:
-
-.. code-block:: lua
-
-    -- the imported module must be stored
-    lu = require('luaunit')
-
-    TestToto = {} --class
-
-        function TestToto:test1_withFailure()
-            local a = 1
-            lu.assertEquals( a , 1 )
-            -- will fail
-            lu.assertEquals( a , 2 )
-        end
-
-    [...]
-
-If you prefer the old way, LuaUnit can continue to export assertions functions if you set the following
-global variable **prior** to importing LuaUnit:
-
-.. code-block:: lua
-
-    -- this works
-    EXPORT_ASSERT_TO_GLOBALS = true
-    require('luaunit')
-
-    TestToto = {} --class
-
-        function TestToto:test1_withFailure()
-            local a = 1
-            assertEquals( a , 1 )
-            -- will fail
-            assertEquals( a , 2 )
-        end
-
-    [...]
-
-
-LuaUnit.run() function
-======================
-
-**Return value**
-
-Run your test suite with the following line::
-
-    os.exit(lu.LauaUnit.run())
-
-The *run()* function returns the number of failures of the test suite. This is
-good for an exit code, 0 meaning success.
-
-
-**Arguments**
-
-If no arguments are supplied, it parses the command-line arguments of the script
-and interpret them. If arguments are supplied to the function, they are parsed
-instead of the command-line. It uses the same syntax.
-
-Example::
-
-    -- execute tests matching the 'withXY' pattern
-    os.exit(lu.LuaUnit.run('--pattern', 'withXY'))
-
-
-**Choice of tests**
-
-If test names were supplied, only those
-tests are executed. When test names are supplied as arguments, they don't have
-to start with *test*, they are run anyway.
-
-If no test names were supplied, a general test collection process starts
-under the following rules:
-
-* all variable starting with *test* or *Test* are scanned. 
-* if the variable is a function it is collected for testing
-* if the variable is a table:
-
-    * all keys starting with *test* or *Test* are collected (provided that they are functions)
-    * keys with name *setUp* and *tearDown* are also collected
-
-If one or more pattern were supplied, the test are then filtered according the
-pattern(s). Only the test that match the pattern(s) are actually executed.
-
-
-**setup and teardown**
-
-The function *setUp()* is executed before each test if it exists in the table. 
-The function *tearDown()* is executed after every test if it exists in the table.
-
-.. Note::
-    *tearDown()* is always executed if it exists, even if there was a failure in the test or in the *setUp()* function.
-    Failures in *setUp()* or *tearDown()* are considered as a general test failures.
-
-
-LuaUnit.runSuite() function
-==============================
-
-If you want to keep the flexibility of the command-line parsing, but want to force
-some parameters, like the output format, you must use a slightly different syntax::
-
-    runner = lu.LuaUnit.new()
-    runner:setOutputType("tap")
-    os.exit( runner:runSuite() )
-
-*runSuite()* behaves like *run()* except that it must be started
-with a LuaUnit instance as first argument, and it will use the LuaUnit
-instance settings.
- 
-
 Command-line options
 ====================
 
@@ -793,20 +683,329 @@ Selecting tests with --pattern and --exclude is usually more flexible. See `Flex
 --help, -h             Print help
 --version              Version information of LuaUnit
 
-Output formats
-------------------
 
-Choose the output format with the syntax ``-o FORMAT`` or ``--output FORMAT``.
+Output formats 
+----------------------
+
+Choose the output format with the syntax ``-o FORMAT`` or ``--output FORMAT`` or the environment variable ``LUAUNIT_OUTPUT``.
 
 Formats available:
 
 * ``text``: the default output format of LuaUnit
 * ``tap``: output compatible with the `Test Anything Protocol`_ 
 * ``junit``: output compatible with the *JUnit XML* format (used by many CI 
-  platforms). The XML is written to the file provided with the ``--name`` or ``-n`` option.
+  platforms). The XML is written to the file provided with the ``--name`` or ``-n`` option or the environment variable ``LUAUNIT_JUNIT_FNAME``.
 * ``nil``: no output at all
 
 .. _Test Anything Protocol: http://testanything.org/
+
+For more information on each format, see `Output formats details`_
+
+
+Other options
+--------------
+
+**Stopping on first error or failure**
+
+If ``--failure`` or ``-f`` is passed as an option, LuaUnit will stop on the first failure or error and display the test results.
+
+If ``--error`` or ``-e`` is passed as an option, LuaUnit will stop on the first error (but continue on failures).
+
+**Randomize test order**
+
+If ``--shuffle`` or ``-s`` is passed as an option, LuaUnit will execute tests in random order. The randomisation works on all test functions
+and methods. As a consequence test methods of a given class may be splitted into multiple location, generating several test class creation and destruction.
+
+**Repeat test**
+
+When using luajit, the just-in-time compiler will kick in only after a given function has been executed a sufficient number of times. To make sure
+that the JIT is not introducing any bug, LuaUnit provides a way to repeat a test may times, with ``--repeat`` or ``-r`` followed by a number.
+
+Flexible test selection
+-------------------------
+
+LuaUnit provides very flexible way to select which tests to execute. We will illustrate this with several examples.
+
+In the examples, we use a test suite composed of the following test funcions::
+
+    -- class: TestAdd
+    TestAdd.testAddError
+    TestAdd.testAddPositive
+    TestAdd.testAddZero
+    TestAdd.testAdder
+
+    -- class: TestDiv
+    TestDiv.testDivError
+    TestDiv.testDivPositive
+    TestDiv.testDivZero
+
+
+With ``--pattern`` or ``-p``, you can provide a lua pattern and only the tests that contain
+the pattern will actually be run.
+
+Example::
+
+    -- Run all tests of zero testing and error testing
+    -- by using the magic character .
+    $ lua mytest_suite.lua -v -p Err.r -p Z.ro
+    Started on 02/19/17 22:29:45
+        TestAdd.testAddError ... Ok
+        TestAdd.testAddZero ... Ok
+        TestDiv.testDivError ... Ok
+        TestDiv.testDivZero ... Ok
+    =========================================================
+    Ran 4 tests in 0.004 seconds, 4 successes, 0 failures, 3 non-selected
+    OK
+
+The number of tests ignored by the selection is printed, along
+with the test result. The tests *TestAdd.testAdder testAdd.testPositive and
+testDiv.testDivPositive* have been correctly ignored.
+
+The pattern can be any lua pattern. Be sure to exclude all magic
+characters with % (like ``-+?*``) and protect your pattern from the shell
+interpretation by putting it in quotes.
+
+With ``--exclude`` or ``-x``, you can provide a lua pattern of tests which should
+be excluded from execution.
+
+Example::
+
+    -- Run all tests except zero testing and except error testing
+    $ lua mytest_suite.lua -v -x Error -x Zero
+    Started on 02/19/17 22:29:45
+        TestAdd.testAddPositive ... Ok
+        TestAdd.testAdder ... Ok
+        TestDiv.testDivPositive ... Ok
+    =========================================================
+    Ran 3 tests in 0.003 seconds, 3 successes, 0 failures, 4 non-selected
+    OK
+
+You can also combine test selection and test exclusion. The rules are the following:
+
+* if the first argument encountered is a inclusion pattern, the list of tests start empty
+* if the first argument encountered is an exclusion pattern, the list of tests start with all tests of the suite
+* each subsequent inclusion pattern will add new tests to the list
+* each subsequent exclusion pattern will remove test from the list
+* the final list is the list of tests executed
+
+In pure logic term, inclusion is the equivalent of ``or match(pattern)`` and exclusion is ``and not match(pattern)`` .
+
+Let's look at some practical examples::
+
+    -- Add all tests which include the word Add
+    -- except the test Adder
+    -- and also include the Zero tests
+    $ lua my_test_suite.lua -v --pattern Add --exclude Adder --pattern Zero
+    Started on 02/19/17 22:29:45
+        TestAdd.testAddError ... Ok
+        TestAdd.testAddPositive ... Ok
+        TestAdd.testAddZero ... Ok
+        TestDiv.testDivZero ... Ok
+    =========================================================
+    Ran 4 tests in 0.003 seconds, 4 successes, 0 failures, 3 non-selected
+    OK
+
+
+LuaUnit runner object
+=======================
+
+The various options set on the command-line can be overridden by creating a LuaUnit runner explicitely and calling specific functions on it.
+
+.. function:: LuaUnit.new()
+
+The execution of a LuaUnit test suite is controlled through a runner object. This object is created with `LuaUnit.new()` .
+
+.. code-block:: lua
+
+    lu = require('luaunit')
+
+
+    runner = lu.LuaUnit.new()
+    -- use the runner object...
+    runner.runSuite()
+
+.. function:: runner:setVerbosity( verbosity )
+
+Set the verbosity of the runner. The value is an integer ranging from lu.VERBOSITY_QUIET to lu.VERBOSITY_VERBOSE .
+
+
+.. function:: runner:setQuitOnError( quitOnError )
+
+Set the quit-on-first-error behavior, like the command-line `--xx`. The argument is a boolean value.
+
+
+.. function:: runner:setQuitOnFailuer( quitOnFailure )
+
+Set the quit-on-first-failure-or-error behavior, like the command-line `--xx`. The argument is a boolean value.
+
+
+.. function:: runner:setRepeat( repeatNumber )
+
+Set the number of times a test function is executed, like the command-line `-xx`. The argument is an integer.
+
+
+.. function:: runner:setShuffle( shuffle )
+
+Set whether the test are run in randomized, like the command-line `--shuffle`. The argument is a boolean value.
+
+
+.. function:: runner:setOutputType(type [, junit_fname])
+
+Set the output type of the test suite. See `Output formats`_ for possible values. When setting the format `junit`, it
+is mandatory to set the filename receiving the xml output. This can be done by passing it as second argument of this function.
+
+
+.. function:: runner:runSuite( [arguments] )
+
+This function runs the test suite.
+
+**Arguments**
+
+If no arguments are supplied, it parses the command-line arguments of the script
+and interpret them. If arguments are supplied to the function, they are parsed
+as the command-line. It uses the same syntax.
+
+Test names may be supplied in arguments, to execute
+only these specific tests. Note that when explicit names are provided
+LuaUnit does not require the test names to necessarily start with *test*.
+
+If no test names were supplied, a general test collection process is done
+and the resulting tests are executed.
+
+**Return value**
+
+It returns the number of failures and errors. On
+success 0 is returned, making is suitable for an exit code.
+
+.. code-block:: lua
+
+    lu = require('luaunit')
+
+    runner = lu.LuaUnit.new()
+    os.exit(runner.runSuite())
+
+
+
+Example of using pattern to select tests::
+
+.. code-block:: lua
+
+    lu = require('luaunit')
+
+    runner = lu.LuaUnit.new()
+    -- execute tests matching the 'withXY' pattern
+    os.exit(runner.runSuite('--pattern', 'withXY')
+
+
+Example of explicitly selecting tests:: 
+
+.. code-block:: lua
+
+    lu = require('luaunit')
+
+    runner = lu.LuaUnit.new()
+    os.exit(runner.runSuite('testABC', 'testDEF'))
+
+
+.. function:: LuaUnit.run( [arguments] )
+
+This function may be called directly from the LuaUnit table. It will
+create internally a LuaUnit runner and pass all arguments to it.
+
+Arguments and return value is the same as :func:`runner:runSuite()` 
+
+Example::
+
+.. code-block:: lua
+
+    -- execute tests matching the 'withXY' pattern
+    os.exit(lu.LuaUnit.run('--pattern', 'withXY'))
+
+
+
+.. function:: runner:runSuiteByInstances( listOfNameAndInstances  )
+
+This function runs test without performing the global test collection process on the global namespace, the test
+are explicitely provided as argument, along with their names.
+
+Before execution, the function will parse the script command-line, like :func:`funner:runSuite()`.
+
+Input is provided as a list of { name, test_instance } . test_instance can either be a function or a table containing 
+test functions starting with the prefix "test".
+
+
+Example of using runSuiteByInstances
+
+.. code-block:: lua
+
+    lu = require('luaunit')
+
+    runner = lu.LuaUnit.new()
+    os.exit(runner.runSuiteByInstances( {'mySpecialTest1', mySpecialTest1}, {'mySpecialTest2', mySpecialTest2} } )
+
+
+Skipping and ending test 
+==========================
+
+LuaUnit allows to force test ending in several ways.
+
+**Test skipping**
+
+.. function:: skip( message )
+
+    Stops the ongoing test and mark it as skipped with the given message. This can be used
+    to deactivate a given test.
+
+
+.. function:: skipIf( condition, message )
+
+    If the condition *condition* evaluates to *true*, stops the ongoing test and mark it as skipped with the given message.
+    Else, continue the test execution normally.
+
+    The expected usage is to call the function at the beginning of the test to
+    verify if the conditions are met for executing such tests.
+
+
+.. function:: runOnlyIf( condition, message )
+
+    If condition evaluates to *false*, stops the ongoing test and mark it as skipped with the 
+    given message. This is the opposite behavior of :func:`skipIf()` .
+
+    The expected usage is to call the function at the beginning of the test to
+    verify if the conditions are met for executing such tests.
+
+
+Number of skipped tests, if any, are reported at the end of the execution.
+
+
+**Force test failing**
+
+.. function:: fail( message )
+
+    Stops the ongoing test and mark it as failed with the given message.
+
+
+.. function:: failIf( condition, message )
+
+    If the condition *condition* evaluates to *true*, stops the ongoing test and mark it as failed with the given message.
+    Else, continue the test execution normally.
+
+
+**Force test success**
+
+.. function:: success()
+
+    Stops the ongoing test and mark it as successful.
+
+.. function:: successIf( condition )
+
+    If the condition *condition* evaluates to *true*, stops the ongoing test and mark it as successful.
+    Else, continue the test execution normally.
+
+
+Output formats details
+=======================
+
 
 To demonstrate the different output formats, we will take the example of the `Getting started with LuaUnit`_
 section and add the following two failing cases:
@@ -986,10 +1185,8 @@ The XML file generated by this execution is the following::
 As you can see, the XML file is quite rich in terms of information. The verbosity level has no effect on junit output, all verbosity give the same output.
 
 Slight inconsistencies exist in the exact XML format in the different continuous integration suites. LuaUnit provides a compatible output which
-is validated against `Jenkins/Hudson schema`_ 
-and `Ant/Maven schema`_ . If you ever find an problem in the XML formats, please report a bug to us, more testing is always welcome.
+is validated against `Jenkins/Hudson schema`_ . If you ever find an problem in the XML formats, please report a bug to us, more testing is always welcome.
 
-.. _Ant/Maven schema:  https://github.com/bluebird75/luaunit/blob/LUAUNIT_V3_2_1/junitxml/junit-apache-ant.xsd 
 .. _Jenkins/Hudson schema: https://github.com/bluebird75/luaunit/blob/LUAUNIT_V3_2_1/junitxml/junit-jenkins.xsd  
 
 **TAP format**
@@ -1086,108 +1283,36 @@ This mode is used by LuaUnit for its internal validation.
 
 
 
-Other options
---------------
+Test collection and execution process
+======================================
 
-**Stopping on first error or failure**
+Test collection
+-------------------
 
-If ``--failure`` or ``-f`` is passed as an option, LuaUnit will stop on the first failure or error and display the test results.
+The test collection and execution process is the following:
 
-If ``--error`` or ``-e`` is passed as an option, LuaUnit will stop on the first error (but continue on failures).
+* If a list of tests is specified on the command-line or as argument to the *runSuite()* or *runSuiteByInstances()*, this 
+  the considered list of tests to run.
+* If no list of tests is specified, the global namespace *_G* is searched for names starting by *test* or *Test*. All
+  such names are put into the list of tests to run (provided they reference either a function or a table).
+* All tables are then scanned for table functions starting with *test* or *Test*, which are then added to the list of tests to run
+* From the list of tests to run, include and exclude patterns are applied
+* If shuffling is activated, the list is randomized. Else, it is sorted in alphabetical order.
 
-**Randomize test order**
+This constitutes the final list of tests to run.
 
-If ``--shuffle`` or ``-s`` is passed as an option, LuaUnit will execute tests in random order. The randomisation works on all test functions
-and methods. As a consequence test methods of a given class may be splitted into multiple location, generating several test class creation and destruction.
+Test execution
+-------------------
 
-**Repeat test**
+Each test function is run in a protected call. If any luaunit assertion fails (assertEquals, ...), the test is considered as a failure. If
+an error is generated during the test execution, the test is marked as in error. Both errors and failures are reported at the end of the execution.
 
-When using luajit, the just-in-time compiler will kick in only after a given function has been executed a sufficient number of times. To make sure
-that the JIT is not introducing any bug, LuaUnit provides a way to repeat a test may times, with ``--repeat`` or ``-r`` followed by a number.
+When executing a table containing tests, the following methods are also considered:
 
-Flexible test selection
--------------------------
-
-LuaUnit provides very flexible way to select which tests to execute. We will illustrate this with several examples.
-
-In the examples, we use a test suite composed of the following test funcions::
-
-    -- class: TestAdd
-    TestAdd.testAddError
-    TestAdd.testAddPositive
-    TestAdd.testAddZero
-    TestAdd.testAdder
-
-    -- class: TestDiv
-    TestDiv.testDivError
-    TestDiv.testDivPositive
-    TestDiv.testDivZero
-
-
-With ``--pattern`` or ``-p``, you can provide a lua pattern and only the tests that contain
-the pattern will actually be run.
-
-Example::
-
-    -- Run all tests of zero testing and error testing
-    -- by using the magic character .
-    $ lua mytest_suite.lua -v -p Err.r -p Z.ro
-    Started on 02/19/17 22:29:45
-        TestAdd.testAddError ... Ok
-        TestAdd.testAddZero ... Ok
-        TestDiv.testDivError ... Ok
-        TestDiv.testDivZero ... Ok
-    =========================================================
-    Ran 4 tests in 0.004 seconds, 4 successes, 0 failures, 3 non-selected
-    OK
-
-The number of tests ignored by the selection is printed, along
-with the test result. The tests *TestAdd.testAdder testAdd.testPositive and
-testDiv.testDivPositive* have been correctly ignored.
-
-The pattern can be any lua pattern. Be sure to exclude all magic
-characters with % (like ``-+?*``) and protect your pattern from the shell
-interpretation by putting it in quotes.
-
-With ``--exclude`` or ``-x``, you can provide a lua pattern of tests which should
-be excluded from execution.
-
-Example::
-
-    -- Run all tests except zero testing and except error testing
-    $ lua mytest_suite.lua -v -x Error -x Zero
-    Started on 02/19/17 22:29:45
-        TestAdd.testAddPositive ... Ok
-        TestAdd.testAdder ... Ok
-        TestDiv.testDivPositive ... Ok
-    =========================================================
-    Ran 3 tests in 0.003 seconds, 3 successes, 0 failures, 4 non-selected
-    OK
-
-You can also combine test selection and test exclusion. The rules are the following:
-
-* if the first argument encountered is a inclusion pattern, the list of tests start empty
-* if the first argument encountered is an exclusion pattern, the list of tests start with all tests of the suite
-* each subsequent inclusion pattern will add new tests to the list
-* each subsequent exclusion pattern will remove test from the list
-* the final list is the list of tests executed
-
-In pure logic term, inclusion is the equivalent of ``or match(pattern)`` and exclusion is ``and not match(pattern)`` .
-
-Let's look at some practical examples::
-
-    -- Add all tests which include the word Add
-    -- except the test Adder
-    -- and also include the Zero tests
-    $ lua my_test_suite.lua -v --pattern Add --exclude Adder --pattern Zero
-    Started on 02/19/17 22:29:45
-        TestAdd.testAddError ... Ok
-        TestAdd.testAddPositive ... Ok
-        TestAdd.testAddZero ... Ok
-        TestDiv.testDivZero ... Ok
-    =========================================================
-    Ran 4 tests in 0.003 seconds, 4 successes, 0 failures, 3 non-selected
-    OK
+* *setUp()* is called prior to each test execution. Any failure or error during *setUp()* will prevent the test from being executed and will
+  be reported in the test suite.
+* *tearDown()* is called after each test, even if the *setUp()* or the test failed. Any failure or error during *tearDown()* will be reported
+  in the test suite.
 
 
 Assertions functions
@@ -1198,8 +1323,7 @@ relies on the :func:`prettystr` for printing nicely formatted values.
 
 All function accept an optional extra message which if provided, is printed along with the failure message.
 
-.. Note:: see :ref:`table-printing` and :ref:`comparing-table-keys-table` for more dealing with recursive tables and tables containing keys of type table.
-
+.. Note:: see :ref:`table-printing` for more information on how LuaUnit prints tables.
 
 Equality assertions
 ----------------------
@@ -1221,16 +1345,57 @@ not influence the test itself.
 
     **Alias**: *assert_equals()*
 
-    Assert that two values are equal. 
+    Assert that two values are equal. This is the most used function for assertion within LuaUnit.
+    The values being compared may be integers, floats, strings, tables, functions or a combination of 
+    those. If provided, *extra_msg* is a string which will be printed along with the failure message.
 
-    For tables, the comparison is a deep comparison :
+    When comparing floating point numbers, it is better to use :func:`assertAlmostEquals` which supports a margin
+    for the equality verification.
 
-    * number of elements must be the same
-    * tables must contain the same keys
-    * each key must contain the same values. The values
-      are also compared recursively with deep comparison.
+    For tables, the comparison supports nested tables and cyclic structures. To be equal, two tables must
+    have the same keys and the value associated with a key must compare equal with assertEquals() (using a recursive
+    algorithm).
 
-    If provided, *extra_msg* is a string which will be printed along with the failure message.
+    When displaying the difference between two tables used as lists, LuaUnit performs an analysis of the list content
+    to pinpoint the place where the list actually differs. See the below example:
+
+.. code-block::
+
+    -- lua test code. Can you spot the difference ?
+    function TestListCompare:test1()
+        local A = { 121221, 122211, 121221, 122211, 121221, 122212, 121212, 122112, 122121, 121212, 122121 } 
+        local B = { 121221, 122211, 121221, 122211, 121221, 122212, 121212, 122112, 121221, 121212, 122121 }
+        lu.assertEquals( A, B )
+    end
+
+    $ lua test_some_lists_comparison.lua
+
+    TestListCompare.test1 ... FAIL
+    test/some_lists_comparisons.lua:22: expected: 
+
+    List difference analysis:
+    * lists A (actual) and B (expected) have the same size
+    * lists A and B start differing at index 9
+    * lists A and B are equal again from index 10
+    * Common parts:
+      = A[1], B[1]: 121221
+      = A[2], B[2]: 122211
+      = A[3], B[3]: 121221
+      = A[4], B[4]: 122211
+      = A[5], B[5]: 121221
+      = A[6], B[6]: 122212
+      = A[7], B[7]: 121212
+      = A[8], B[8]: 122112
+    * Differing parts:
+      - A[9]: 122121
+      + B[9]: 121221
+    * Common parts at the end of the lists
+      = A[10], B[10]: 121212
+      = A[11], B[11]: 122121
+
+
+
+.. Note:: see :ref:`comparing-table-keys-table` for information on comparison of tables containing keys of type table.
 
     LuaUnit provides other table-related assertions, see :ref:`assert-table` .
 
@@ -1240,7 +1405,8 @@ not influence the test itself.
     **Alias**: *assert_not_equals()*
 
     Assert that two values are different. The assertion
-    fails if the two values are identical. Like the previous function, it uses table deep comparison.
+    fails if the two values are identical. It behaves exactly like :func:`assertEquals` but checks
+    for the opposite condition.
 
     If provided, *extra_msg* is a string which will be printed along with the failure message.
 
@@ -1256,20 +1422,31 @@ that a value is anything but the boolean *true* or *false*.
 
 The below table sums it up:
 
-============  ============  ===================  ================  =============  ===================  ===============
-**True assertion family**                                            **False assertion family**
------------------------------------------------------------------  ---------------------------------------------------
-Input Value   assertTrue()   assertEvalToTrue()  assertNotFalse()  assertFalse()  assertEvalToFalse()  assertNotTrue()
-============  ============  ===================  ================  =============  ===================  ===============
-*true*        OK            OK                   OK                Fail           Fail                 Fail
-*false*       Fail          Fail                 Fail              OK             OK                   OK 
-*nil*         Fail          Fail                 OK                Fail           OK                   OK 
-*0*           Fail          OK                   OK                Fail           Fail                 Fail 
-*1*           Fail          OK                   OK                Fail           Fail                 Fail
-*"hello"*     Fail          OK                   OK                Fail           Fail                 Fail
-============  ============  ===================  ================  =============  ===================  ===============
+    **True assertion family**
 
+============  ============  ===================  ================
+Input Value   assertTrue()  assertEvalToTrue()   assertNotTrue()
+============  ============  ===================  ================
+*true*        OK            OK                   OK
+*false*       Fail          Fail                 Fail
+*nil*         Fail          Fail                 OK
+*0*           Fail          OK                   OK
+*1*           Fail          OK                   OK
+*"hello"*     Fail          OK                   OK
+============  ============  ===================  ================
 
+    **False assertion family**
+
+============  ================  =============  ===================
+Input Value   assertNotFalse()  assertFalse()  assertEvalToFalse()
+============  ================  =============  ===================
+*true*        Fail              Fail           Fail
+*false*       OK                OK             OK
+*nil*         Fail              OK             OK
+*0*           Fail              Fail           Fail
+*1*           Fail              Fail           Fail
+*"hello"*     Fail              Fail           Fail
+============  ================  =============  ===================
 
 .. function:: assertEvalToTrue(value [, extra_msg])
 
@@ -1454,10 +1631,20 @@ Error related assertions, to verify error generation and error messages.
     function does not yield an error, or if the error message is not identical, the assertion fails.
 
     Be careful when using this function that error messages usually contain the file name and
-    line number information of where the error was generated. This is usually inconvenient. To 
-    ignore the filename and line number information, you can either use a pattern with :func:`assertErrorMsgMatches`
-    or simply check for the message content with :func:`assertErrorMsgContains` .
-    
+    line number information of where the error was generated. This is usually inconvenient so we have
+    introduced the :func:`assertErrorMsgContentEquals` . Be sure to check it.
+
+
+.. function:: assertErrorMsgContentEquals( expectedMsg, func, ... )
+
+    **Alias**: *assert_error_msg_content_equals()*
+
+    Assert that calling function *func* will generate exactly the given error message, excluding the
+    file and line information. File and line information may change as your programs evolve so we
+    find this version more convenient than :func:`assertErrorMsgEquals` .
+
+
+
 .. function:: assertErrorMsgContains( partialMsg, func, ... )
 
     **Alias**: *assert_error_msg_contains()*
@@ -1465,6 +1652,8 @@ Error related assertions, to verify error generation and error messages.
     Assert that calling function *func* will generate an error message containing *partialMsg* . If the
     function does not yield an error, or if the expected message is not contained in the error message, the 
     assertion fails.
+
+
     
 .. function:: assertErrorMsgMatches( expectedPattern, func, ... )
 
@@ -1583,29 +1772,38 @@ Table assertions
 
 
 
-Ending test 
----------------------
+.. function:: assertTableContains(table, element [, extra_msg])
 
-LuaUnit allows to force test ending, either positevely or negatively, with the following functions.
+    **Alias**: *assert_table_contains()*
 
-.. function:: fail( message )
+    Assert that the table contains at least one key with value `element`. Element
+    may be of any type (including table), the recursive equality algorithm of assertEquals()
+    is used for verifying the presence of the element.
+    If provided, *extra_msg* is a string which will be printed along with the failure message.
 
-    Stops the ongoing test and mark it as failed with the given message.
+.. code-block:: lua
+
+        lu.assertTableContains( {'a', 'b', 'c', 'd'}, 'b' ) -- assertion succeeds
+        lu.assertTableContains( {1, 2, 3, {4} }, {4} } -- assertion succeeds
 
 
-.. function:: failIf( cond, message )
+.. function:: assertNotTableContains(table, element [, extra_msg])
 
-    If the condition *cond* evaluates to *true*, stops the ongoing test and mark it as failed with the given message.
-    Else, continue the test execution normally.
+    **Alias**: *assert_not_table_contains()*
 
-.. function:: success()
+    Negative version of :func:`assertTableContains` .
 
-    Stops the ongoing test and mark it as successful.
+    Assert that the table contains no element with value `element`. Element
+    may be of any type (including table), the recursive equality algorithm of assertEquals()
+    is used for verifying the presence of the element.
+    If provided, *extra_msg* is a string which will be printed along with the failure message.
 
-.. function:: successIf( cond )
+.. code-block:: lua
 
-    If the condition *cond* evaluates to *true*, stops the ongoing test and mark it as successful.
-    Else, continue the test execution normally.
+        lu.assertNotTableContains( {'a', 'b', 'c', 'd'}, 'e' ) -- assertion succeeds
+        lu.assertNotTableContains( {1, 2, 3, {4} }, {5} } -- assertion succeeds
+
+
 
 
 Scientific computing and LuaUnit
@@ -1633,7 +1831,7 @@ If your calculation shall be portable to multiple OS or compilers, you may get d
 
 .. _MinusZero: 
 
-.. Note:: 
+.. Note on minus zero:: 
     If you need to deal with value *minus zero*, be very careful because Lua versions are inconsistent on how they treat the syntax *-0* : it creates either
     a *plus zero* or a *minus zero* . Multiplying or dividing *0* by *-1* also yields inconsistent results. The reliable way to create the *-0* 
     value is : minusZero = -1 / (1/0)
@@ -1734,7 +1932,7 @@ This is either:
     verification is done by dividing by the provided number and verifying that it yields
     *minus infinity* . If provided, *extra_msg* is a string which will be printed along with the failure message.
 
-    Be careful when dealing with *+0* and *-0*, see :ref:`MinusZero`
+    Be careful when dealing with *+0* and *-0*, see MinusZero_
 
 
 .. function:: assertNotPlusZero( value  [, extra_msg])
@@ -1744,7 +1942,7 @@ This is either:
     Assert that a given number is NOT *+0*, according to the definition of IEEE-754_ .
     If provided, *extra_msg* is a string which will be printed along with the failure message.
 
-    Be careful when dealing with *+0* and *-0*, see :ref:`MinusZero`
+    Be careful when dealing with *+0* and *-0*, see MinusZero_
 
 
 .. function:: assertNotMinusZero( value  [, extra_msg])
@@ -1754,16 +1952,20 @@ This is either:
     Assert that a given number is NOT *-0*, according to the definition of IEEE-754_ .
     If provided, *extra_msg* is a string which will be printed along with the failure message.
 
-    Be careful when dealing with *+0* and *-0*, see :ref:`MinusZero`
+    Be careful when dealing with *+0* and *-0*, see MinusZero_
 
 
 .. function:: assertAlmostEquals( actual, expected [, margin=EPS [, extra_msg]] )
 
     **Alias**: *assert_almost_equals()*
 
-    Assert that two floating point numbers are equal by the defined margin. 
+    Assert that two floating point numbers or tables are equal by the defined margin. 
     If margin is not provided, the machine epsilon *EPS* is used.
     If provided, *extra_msg* is a string which will be printed along with the failure message.
+
+    The function accepts either floating point numbers or tables. Complex structures with
+    nested tables are supported. Comparing tables with assertAlmostEquals works just like :func:`assertEquals`
+    with the difference that values are compared with a margin instead of with direct equality.
 
     Be careful that depending on the calculation, it might make more sense to measure
     the absolute error or the relative error (see below):
@@ -1817,7 +2019,7 @@ Pretty printing
 
 **Example of prettystr()**
     
-.. code-block:: lua
+.. code-block:: 
 
         > lu = require('luaunit')
         > t1 = {1,2,3}
@@ -1828,6 +2030,114 @@ Pretty printing
         > print( lu.prettystr(t1) )
         {1, 2, 3, f=function: 00635d68, fa=false, toto="titi", tr=true}
 
+
+.. _luaunit-global-asserts:
+
+Enabling global or module-level functions
+=========================================
+
+Versions of LuaUnit before version 3.1 would export all assertions functions to the global namespace. A typical
+lua test file would look like this:
+
+.. code-block:: lua
+
+    require('luaunit')
+
+    TestToto = {} --class
+
+        function TestToto:test1_withFailure()
+            local a = 1
+            assertEquals( a , 1 )
+            -- will fail
+            assertEquals( a , 2 )
+        end
+
+    [...]
+
+However, this is an obsolete practice in Lua. It is now recommended to keep all functions inside the module. Starting
+from version 3.1 LuaUnit follows this practice and the code should be adapted to look like this:
+
+.. code-block:: lua
+
+    -- the imported module must be stored
+    lu = require('luaunit')
+
+    TestToto = {} --class
+
+        function TestToto:test1_withFailure()
+            local a = 1
+            lu.assertEquals( a , 1 )
+            -- will fail
+            lu.assertEquals( a , 2 )
+        end
+
+    [...]
+
+If you prefer the old way, LuaUnit can continue to export assertions functions if you set the following
+global variable **prior** to importing LuaUnit:
+
+.. code-block:: lua
+
+    -- this works
+    EXPORT_ASSERT_TO_GLOBALS = true
+    require('luaunit')
+
+    TestToto = {} --class
+
+        function TestToto:test1_withFailure()
+            local a = 1
+            assertEquals( a , 1 )
+            -- will fail
+            assertEquals( a , 2 )
+        end
+
+    [...]
+
+
+Variables controlling LuaUnit behavior
+=========================================
+
+luaunit.ORDER_ACTUAL_EXPECTED
+------------------------------
+
+This boolean value defines the order of arguments in assertion functions.
+
+For example, in the code `luaunit.assertEquals( a, b )` , LuaUnit will treat by default
+`a` as a calculated value under test (actual value) and `b` as a reference value aginst which `a` is 
+compared (expected value). This will show up in the error reported for the test:
+
+.. code-block:: shell
+
+    1) TestWithFailures.testFail1
+    doc\my_test_suite_with_failures.lua:79: expected: "titi"
+    actual: "toto"
+
+If you prefer the opposite convention, i.e having the expected argument as first
+and actual argument as second, set the *ORDER_ACTUAL_EXPECTED* to *false*.
+
+
+luaunit.PRINT_TABLE_REF_IN_ERROR_MSG
+------------------------------------------
+
+This controls whether table references are always printed along with table or not. See `table-printing`_ for details. The
+default is `false`.
+
+
+.. _strip_extra_entries_in_stack_trace:
+
+luaunit.STRIP_EXTRA_ENTRIES_IN_STACK_TRACE
+------------------------------------------
+
+This controls how many extra entries in a stack-trace are stripped. By default, LuaUnit hides all its internals
+functions to show only user code in the error stack trace. However, if LuaUnit is used as part of another test
+framework, and one wants to also hide this global test framework entries, you can increase the number here. The default
+is *0* .
+
+
+luaunit.VERSION
+------------------------------------------
+
+Current version of LuaUnit as a string.
 
 
 Developing LuaUnit
@@ -1863,7 +2173,7 @@ Thank to our continuous integration setup with Travis-Ci and AppVeyor, all unit-
 any *Pull Request* will show immediately if anything is going unexpected.
 
 
-Unit-tests
+Running unit-tests
 -------------------
 All proposed changes should pass all unit-tests and if needed, add more unit-tests to cover the bug or the new functionality. Usage is pretty simple:
 
@@ -1876,18 +2186,18 @@ All proposed changes should pass all unit-tests and if needed, add more unit-tes
     OK
 
 
-Functional tests
--------------------
+Running functional tests
+----------------------------
 Functional tests also exist to validate LuaUnit. Their management is slightly more complicated. 
 
-The main goal of functional tests is to validate that LuaUnit output has not been altered. Since LuaUnit supports some standard compliant output (TAP, junitxml), this is very important (and it has been broken in the past)
+The main goal of functional tests is to validate that LuaUnit output has not been altered. Since LuaUnit supports some standard compliant output (TAP, junitxml), this is very important (and it has been broken in the past).
 
 Functional tests perform the following actions:
 
 * Run the 2 suites: example_with_luaunit.lua, test_with_err_fail_pass.lua (with various options to have successe, failure and/or errors)
 * Run every suite with all output format, all verbosity
 * Validate the XML output with jenkins/hudson and junit schema
-* Compare the results with the previous output ( archived in test/ref ), with some tricks to make the comparison possible :
+* Compare the results with the reference output ( archived in test/ref ), with some tricks to make the comparison possible :
 
     * adjustment of the file separator to use the same output on Windows and Unix
     * date and test duration is zeroed so that it does not impact the comparison
@@ -1911,6 +2221,7 @@ When functional tests work well, it looks like this:
 
 When functional test fail, a diff of the comparison between the reference output and the current output is displayed (it can be quite 
 long). The list of faulty files is summed-up at the end.
+
 
 Modifying reference files for functional tests
 -----------------------------------------------
@@ -1972,7 +2283,7 @@ You can then commit the new files into git.
 
     When committing those changes into git, please use if possible an
     intelligent git committing tool to commit only the interesting changes.
-    With SourceTree for example, in case of XML changes, I can select only the
+    With SourceTree or SublimeMerge for example, in case of XML changes, I can select only the
     lines relevant to the change and avoid committing all the updates to test
     duration and test datestamp.
 
@@ -1987,6 +2298,96 @@ Functional tests may start failing when:
 2. Improving or breaking LuaUnit output
 
 This a good place to start looking if you see failures occurring.
+
+
+Using doit.py
+--------------
+
+The utility *doit.py* is a useful developer tool to repeat common developer commands.
+
+**Running syntax check**
+
+.. code-block:: shell
+
+    doit.py luacheck
+
+Run luacheck on the LuaUnit code.
+
+
+**Running unit-tests**
+
+.. code-block:: shell
+
+    doit.py rununittests 
+
+Use it to run all unit tests, on all installed versions of Lua on the sytem.
+
+
+**Running all tests**
+
+.. code-block:: shell
+
+    doit.py runtests
+
+Run luacheck then run unit-tests then run functional tests. Just like the continuous integration.
+
+**Creating documentation**
+
+.. code-block:: shell
+
+    doit.py makedoc
+
+Runs sphinx to generate the html documentation. You must have sphinx installed on your path.
+
+
+**Preparing a release**
+
+.. code-block:: shell
+
+    doit.py buildrock
+
+Create a rock file ready to be uploaded to luarocks, containing a clone of the current git, with documentation generated
+README and LICENSE, tests, and everything else stripped out.
+
+
+.. code-block:: shell
+
+    doit.py packageit
+
+Create a zip and tar.gz archive suitable to be uploaded to github. The archive is composed of a clone
+of the current git content, stripped from everything not related to using luaunit (no CI files, no doit.lu, ...)
+but with full documentation generated.
+
+
+Process of releasing a new version of LuaUnit
+=============================================
+
+The steps are the following:
+
+* update luaunit with the desired functionality, ready for a release
+* update the version number in luaunit.lua
+* update the version number in doit.py
+* check that all tests pass on all supported lua versions
+
+.. code-block:: shell
+
+    doit.py runtests 
+
+* update *examples* if needed to reflect new features
+* update index.rst with documentation of new features/behavior
+* update README.md and index.rst with the release information (date and content)
+* generate package for github:
+
+.. code-block:: shell
+
+    doit.py packageit
+
+* verify the content of the packages:
+    * documentation must be properly generated
+    * examples should work
+    * unit-tests should pass
+
+
 
 Annexes
 ********
@@ -2041,10 +2442,8 @@ helps identifying tables:
 Annex B: Comparing tables with keys of type table
 ==================================================
 
-    If provided, *extra_msg* is a string which will be printed along with the failure message.
-
-
-This is a very uncommon scenario but there are a few programs out there which use tables as keys for other tables. LuaUnit has been adjusted to deal intelligently with this scenario.
+There are a few programs out there which use tables as keys for other tables. How to compare
+such tables is delicate.
 
 A small code block is worth a thousand pictures :
 
@@ -2062,44 +2461,25 @@ A small code block is worth a thousand pictures :
     t4 = { t2='a' }
     t5 = { t2='a' }
 
-There are two ways to treat comparison of tables t3 and t4:
 
-**Method 1: table keys are compared by content**
+The difference between t3 and t4 is that they both reference a key with different table references but
+identical table content.
 
-* t3 contain one key: t1
-* t4 contain one key: t2, which has exactly the same content as t1
-* the two keys compare equally with assertEquals, so assertEquals( t3, t4 ) succeeds
-
-**Method 2: table keys are compared by reference**
-
-* t3 contain one key: t1
-* t4 contain one key: t2, which is not the same table as t1, its reference is different
-* the two keys are different because t1 is a different object than t2 so assertEquals( t3, t4 ) fails
-
-Whether method 1 or method 2 is more appropriate is up for debate.
-
-LuaUnit has been adjusted to support both scenarios, with the config variable: *TABLE_EQUALS_KEYBYCONTENT*
-
-* TABLE_EQUALS_KEYBYCONTENT = true (default): method 1 - table keys compared by content
-* TABLE_EQUALS_KEYBYCONTENT = false: method 2 - table keys compared by reference
-
-In any case, assertEquals( t4, t5 ) always succeeds.
-
-To adjust the config, change it into the luaunit table before running any tests:
-
+LuaUnit chooses to treat this as two different keys, so t3 and t4 are not considered equal.
 
 .. code-block:: lua
 
-    local lu = require('luaunit')
+    lu.assertEquals( t3, t4 ) -- fails
 
-    -- define all your tests
-    -- ...
 
-    lu.TABLE_EQUALS_KEYBYCONTENT = false
-    -- run your tests:
-    os.exit( lu.LuaUnit.run() )
+If using the same table as key, they are now considered equal:
 
-.. _source-code-example:
+.. code-block:: lua
+
+    lu.assertEquals( t4, t5 ) -- fails
+
+
+.. _Source_code_example:
 
 Annex C: Source code of example
 =================================

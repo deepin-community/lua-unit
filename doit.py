@@ -1,27 +1,31 @@
 # My universal runner for this project, the equivalent of a Makefile
-import subprocess, sys, os, shutil, os.path, optparse, glob
+import subprocess, sys, os, shutil, os.path, glob
 
-VERSION='3.3'
+VERSION='3.4'
 RELEASE_NAME='luaunit-%s' % VERSION
 ROCK_RELEASE_NAME='rock-%s' % RELEASE_NAME
 RELEASE_DIR='release/' + RELEASE_NAME + '/'
-RELEASE_TAG='LUAUNIT_V3_3'
+RELEASE_TAG='LUAUNIT_V' + VERSION.replace('.', '_')
 TARGET_ZIP=RELEASE_NAME + '.zip'
 TARGET_TGZ=RELEASE_NAME + '.tgz'
 REPO_PATH='d:/work/luaunit/luaunit1'
 
-# LUA50='d:/program/dev/lua/lua50/lua50.exe'
+PATH_LUACHECK='d:\\program\\dev\\lua\\luarocks\\systree\\bin\\luacheck.bat'
+
 LUA51='d:/program/dev/lua/lua51/lua51.exe'
 LUA52='d:/program/dev/lua/lua52/lua52.exe'
 LUA53='d:/program/dev/lua/lua53/lua53.exe'
+LUA54='d:/program/dev/lua/lua54/lua54.exe'
 LUAJIT='d:/program/dev/lua/luajit/luajit.exe'
+LUAJIT21='d:/program/dev/lua/luajit21/luajit.exe'
 
 ALL_LUA = ( 
-    (LUA53, 'lua 5.3'), 
-    (LUA52, 'lua 5.2'), 
-    (LUA51, 'lua 5.1'), 
-    (LUAJIT, 'lua JIT'), 
-#    (LUA50, 'lua 5.0'),    no longer supported...
+    (LUA54, 'Lua 5.4'), 
+    (LUA53, 'Lua 5.3'), 
+    (LUA52, 'Lua 5.2'), 
+    (LUA51, 'Lua 5.1'), 
+    (LUAJIT, 'Lua JIT 2.0'), 
+    (LUAJIT21, 'Lua JIT 2.1'), 
 )
 
 os.environ["nodosfilewarning"] = "1"
@@ -33,31 +37,32 @@ def run_unit_tests():
     '''Run unit-tests with all versions of lua'''
     for lua, luaversion in ALL_LUA:
         report( 'Running unit-tests tests with %s' % luaversion )
-        retcode = subprocess.call( [lua, 'run_unit_tests.lua'] )
+        retcode = subprocess.call( [lua, 'run_unit_tests.lua', '--shuffle'] )
         if retcode != 0:
             report( 'Invalid retcode when running tests: %d' % retcode )
             sys.exit( retcode )
 
-def run_tests():
+def run_tests(with_linting=True):
     '''Run tests with all versions of lua'''
+    run_luacheck()
     run_unit_tests()
 
     for lua, luaversion in ALL_LUA:
         report( 'Running functional tests tests with %s' % luaversion )
-        retcode = subprocess.call( [lua, 'run_functional_tests.lua'] )
+        args = [lua, 'run_functional_tests.lua']
+        if with_linting:
+            args.append('--with-linting')
+        retcode = subprocess.call( args )
         if retcode != 0:
             report( 'Invalid retcode when running tests: %d' % retcode )
             sys.exit( retcode )
 
-    run_luacheck()
     report( 'All tests succeed!' )
 
 def run_luacheck():
     report('Running luacheck')
-    retcode = subprocess.call( ['luacheck.bat', '*.lua', 'test' ] )
-    if retcode != 0:
-        report( 'Invalid luacheck result' )
-        sys.exit( retcode )
+    subprocess.check_call([PATH_LUACHECK, 'example_with_luaunit.lua', 'luaunit.lua', 'run_unit_tests.lua', 'run_functional_tests.lua', 'test/'],
+                    shell=True)
 
 def run_example():
     for lua, luaversion in ALL_LUA:
@@ -68,7 +73,18 @@ def run_example():
             sys.exit( retcode )
     report( 'All examples ran!' )
 
+
 def pre_packageit_or_buildrock_step1():
+    '''
+    - create a release directory
+    - export the content of the git project but strips
+        * git stuff
+        * CI stuff (travis, appveyor)
+        * doit.py, todo.txt
+        * junitxml directory
+        * rockspec
+        * build documentation and move the html documentation to just doc
+    '''
     # shutil.rmtree('release', True)
     try:
         os.mkdir('release')
@@ -100,12 +116,14 @@ def pre_packageit_or_buildrock_step1():
     shutil.copy( 'olddoc/my_test_suite.lua', 'doc')
     shutil.rmtree('olddoc/')
     
-    run_tests()
+    run_tests(False)
     run_example()
     os.unlink('.luacheckrc')    # keep it to run the tests successfully
 
 def packageit():
-    # Prepare a user release package, strip out all development stuff
+    '''Generate zip and targz archives for a release to GitHub
+    '''
+    
     pre_packageit_or_buildrock_step1()
 
     # Packaging into zip and tgz
@@ -187,25 +205,18 @@ def rundoctests():
 
         print( open('toto.xml').read() )
 
-def install():
-    installpath = '/usr/local/share/lua/'
-    for lua, luaversion in ALL_LUA:
-        lua,ver = luaversion.split( )
-        if os.path.exists(installpath+ver):
-            shutil.copy('luaunit.lua',installpath+ver)
-            
-
 
 OptToFunc = {
     'rununittests'  : run_unit_tests,
+    'run_unit_tests': run_unit_tests,   # alias
     'runtests'      : run_tests,
+    'run_tests'     : run_tests,        # alis
     'luacheck'      : run_luacheck,
     'runexample'    : run_example,
     'packageit'     : packageit,
     'buildrock'     : buildrock,
     'makedoc'       : makedoc,
     'rundoctests'   : rundoctests,
-    'install'       : install,
     'help'          : help,
 }
 

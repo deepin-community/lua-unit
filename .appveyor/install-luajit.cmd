@@ -2,21 +2,24 @@ REM Do a minimalistic build of LuaJIT using the MinGW compiler
 
 set PATH=C:\MinGW\bin;%PATH%
 
-set targetdir=%2
+echo Downloading %PRETTY_VERSION% ...
+curl -fLsS -o %DL_ZIP%.zip %DL_URL%
 
-REM retrieve and unpack source
-curl -fLsS -o %1.zip http://luajit.org/download/%1.zip
-unzip -q %1
+echo Unzipping %DL_ZIP%
+unzip -q %DL_ZIP%
 
 REM tweak Makefile for a static LuaJIT build (Windows defaults to "dynamic" otherwise)
-sed -i "s/BUILDMODE=.*mixed/BUILDMODE=static/" %1\src\Makefile
+sed -i "s/BUILDMODE=.*mixed/BUILDMODE=static/" %DL_ZIP%\src\Makefile
 
-mingw32-make TARGET_SYS=Windows -C %1\src
+mingw32-make TARGET_SYS=Windows -C %DL_ZIP%\src
 
+echo Installing %PRETTY_VERSION% ...
 REM copy luajit.exe to project dir
-mkdir %APPVEYOR_BUILD_FOLDER%\%targetdir%
-copy %1\src\luajit.exe %APPVEYOR_BUILD_FOLDER%\%targetdir%\
+mkdir %APPVEYOR_BUILD_FOLDER%\%LUA_BIN_DIR%
+copy %DL_ZIP%\src\luajit.exe %APPVEYOR_BUILD_FOLDER%\%LUA_BIN_DIR%\
 
 REM clean up (remove source folders and archive)
-rm -rf %1/*
-rm -f %1.zip
+rm -rf %DL_ZIP%/*
+rm -f %DL_ZIP%.zip
+
+

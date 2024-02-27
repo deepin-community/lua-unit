@@ -4,6 +4,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/bluebird75/luaunit/badge.svg?branch=master)](https://coveralls.io/github/bluebird75/luaunit?branch=master)
 [![Downloads](https://img.shields.io/badge/downloads-235k-brightgreen.svg)](https://luarocks.org/modules/bluebird75/luaunit)
 [![License](http://img.shields.io/badge/License-BSD-green.svg)](LICENSE.txt)
+[![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/2756/badge)](https://bestpractices.coreinfrastructure.org/projects/2756)
 
 ## LuaUnit
 by Philippe Fremy
@@ -13,8 +14,8 @@ of xUnit libraries (Python unittest, Junit, NUnit, ...). It supports
 several output formats (Text, TAP, JUnit, ...) to be used directly or work with Continuous Integration platforms
 (Jenkins, Hudson, ...).
 
-For simplicity, LuaUnit is contained into a single-file and has no external dependency. To start using it, 
-just add the file *luaunit.lua* to your project. A [LuaRocks package](https://luarocks.org/modules/bluebird75/luaunit) is also available.
+LuaUnit may be installed as a [rock](https://luarocks.org/modules/bluebird75/luaunit) or directly added to your project.
+For simplicity, LuaUnit is contained into a single-file and has no external dependency. 
 
 Tutorial and reference documentation is available on
 [read-the-docs](http://luaunit.readthedocs.org/en/latest/)
@@ -65,13 +66,15 @@ format, set verbosity and more. See [the documentation](http://luaunit.readthedo
 
 LuaUnit also provides some dedicated support to scientific computing. See [the documentation](http://luaunit.readthedocs.io/en/latest/#scientific-computing-and-luaunit) .
 
-LuaUnit is very well tested: code coverage is 99.5% . The test suite is run on every version of Lua (Lua 5.1 to 5.3, LuaJIT 2.0 and 2.1 beta)
+LuaUnit is very well tested: code coverage is 99.5% . The test suite is run on every version of Lua (Lua 5.1 to 5.4, LuaJIT 2.0 and 2.1 beta)
 and on many OS (Windows Seven, Windows Server 2012, MacOs X and Ubuntu). You can check the continuous build results on [Travis-CI](https://travis-ci.org/bluebird75/luaunit) and [AppVeyor](https://ci.appveyor.com/project/bluebird75/luaunit).
 
 LuaUnit is maintained on GitHub: https://github.com/bluebird75/luaunit . We gladly accept feature requests and even better Pull Requests.
 For more information on LuaUnit development, please check: [Developing LuaUnit](http://luaunit.readthedocs.org/en/latest/#developing-luaunit) . 
 
 LuaUnit is released under the BSD license.
+
+The main developer can be reached at *phil.fremy at free.fr* . If you have security issue to report requiring confidentiality, this is the address to use.
 
 ## LuaUnit successes
 
@@ -110,7 +113,7 @@ for all MAD calculation and framework validation. Thanks Laurent Deniau for cont
 
 **LuaRocks**
 
-LuaUnit v3.3 is available on [LuaRocks](https://luarocks.org/modules/bluebird75/luaunit). To install it, you need at least 
+LuaUnit is available on [LuaRocks](https://luarocks.org/modules/bluebird75/luaunit). To install it, you need at least 
 LuaRocks version 2.4.4 (due to old versions of wget being incompatible with GitHub https downloading)
 
 **GitHub** 
@@ -121,17 +124,27 @@ The simplest way to install LuaUnit is to fetch the GitHub version:
 
 Then copy the file luaunit.lua into your project or the Lua libs directory.
 
-The version in development on GitHub is always stable and can be used safely.
-
-On Linux, you can also install it into your Lua directories
-
-    sudo python doit.py install
-
-If that fail, edit the function `install()` in the file `doit.py` to adjust
-the Lua version and installation directory. It uses, by default, Linux paths that depend on the version.
-
+The version of the main branch on GitHub is always stable and can be used safely.
 
 ### History 
+
+#### Version 3.4 - 02 March 2021
+* support for Lua 5.4
+* assertAlmostEquals() works also on tables and nested structures
+* choose test output style with environment variable LUAUNIT_OUTPUT
+* setOutputType() accepts the xml filename as second argument when using the format junit
+* improve printing of table information in case of cycles
+* add ability to skip tests with `skip()` and `skipIf()`  
+* detect attempts to exit the test suite before it is finished running
+* add assertErrorMsgContentEquals() to validate exactly any error message
+* filter out some stack entries when printing assertions (useful when embedding LuaUnit inside another test layer) with `STRIP_EXTRA_ENTRIES_IN_STACK_TRACE`
+* add `assertTableContains()` and `assertNotTableContains()` to verify the presence of a given value within a table
+* remove option TABLE_EQUALS_KEYBYCONTENT, it did not make sense
+* bugfix:
+	* assertIs()/assertNotIs() deals better with protected metatables
+	* assertEquals() deals better with tables containing cycles of different structure
+	* fix table length comparison for table returning inconsistent length
+
 
 #### Version 3.3 - 6. March 2018
 * General
@@ -159,6 +172,7 @@ the Lua version and installation directory. It uses, by default, Linux paths tha
 	* support for luarocks doc command
 * General doc improvements (detailed description of all output, more cross-linking between sections)
 
+
 #### Version 3.2 - 12. Jul 2016
 * distinguish between failures (failed assertion) and errors
 * add command-line option to stop on first error or failure
@@ -168,6 +182,7 @@ the Lua version and installation directory. It uses, by default, Linux paths tha
 * added documentation about development process
 * improved support for table containing keys of type table
 * small bug fixes, several internal improvements
+
 
 #### Version 3.1 - 10 Mar. 2015
 * luaunit no longer pollutes global namespace, unless defining EXPORT_ASSERT_TO_GLOBALS to true
@@ -181,10 +196,11 @@ the Lua version and installation directory. It uses, by default, Linux paths tha
 no longer exported directly to the global namespace. See documentation for upgrade
 paths.
 
+
 #### Version 3.0 - 9. Oct 2014
 
 Since some people have forked LuaUnit and release some 2.x version, I am
-jumping the version number.
+jumping the version number to 3.
 
 - moved to Github
 - full documentation available in text, html and pdf at read-the-docs.org
@@ -198,8 +214,9 @@ jumping the version number.
 - improved error messages for several assertions
 - command-line options to select test, control output type and verbosity
 
+
 #### Version 2.0
-Unofficial fork from version 1.3
+Unofficial fork from version 1.3 by rjbcomupting
 - lua 5.2 module style, without global namespace pollution
 - setUp() may be named Setup() or setup()
 - tearDown() may be named Teardown() or teardown()
@@ -210,6 +227,7 @@ Unofficial fork from version 1.3
 - More assertions: 
   - is<Type>, is_<type>, assert<Type> and assert_<type> (e.g. assert( LuaUnit.isString( getString() ) )
   - assertNot<Type> and assert_not_<type>
+
 
 #### Version 1.5 - 8. Nov 2012
 - compatibility with Lua 5.1 and 5.2
@@ -246,3 +264,4 @@ Unofficial fork from version 1.3
 - two verbosity level, like in python unittest
 
 ![stats](https://stats.sylphide-consulting.com/piwik/piwik.php?idsite=37&rec=1)
+
